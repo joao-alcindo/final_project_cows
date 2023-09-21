@@ -314,6 +314,26 @@ def save_model(args, epoch, model, model_without_ddp, optimizer, loss_scaler):
         model.save_checkpoint(save_dir=args.output_dir, tag="checkpoint-%s" % epoch_name, client_state=client_state)
 
 
+
+def save_model_new(output_dir, epoch, model, model_without_ddp, optimizer, loss_scaler):
+    epoch_name = str(epoch)
+    if loss_scaler is not None:
+        checkpoint_paths = [output_dir / ('checkpoint-%s.pth' % epoch_name)]
+        for checkpoint_path in checkpoint_paths:
+            to_save = {
+                'model': model_without_ddp.state_dict(),
+                'optimizer': optimizer.state_dict(),
+                'epoch': epoch,
+                'scaler': loss_scaler.state_dict(),
+            }
+
+            save_on_master(to_save, checkpoint_path)
+    else:
+        client_state = {'epoch': epoch}
+        model.save_checkpoint(save_dir=output_dir, tag="checkpoint-%s" % epoch_name, client_state=client_state)
+
+
+
 def load_model(args, model_without_ddp, optimizer, loss_scaler):
     if args.resume:
         if args.resume.startswith('https'):
@@ -329,6 +349,27 @@ def load_model(args, model_without_ddp, optimizer, loss_scaler):
             if 'scaler' in checkpoint:
                 loss_scaler.load_state_dict(checkpoint['scaler'])
             print("With optim & sched!")
+
+
+
+def load_model_new(resume_path, model_without_ddp, optimizer, loss_scaler, start_epoch=0, eval_mode=False):
+    if resume_path:
+        if resume_path.startswith('https'):
+            checkpoint = torch.hub.load_state_dict_from_url(
+                resume_path, map_location='cpu', check_hash=True)
+        else:
+            checkpoint = torch.load(resume_path, map_location='cpu')
+        model_without_ddp.load_state_dict(checkpoint['model'])
+        print("Resume checkpoint %s" % resume_path)
+        if 'optimizer' in checkpoint and 'epoch' in checkpoint and not eval_mode:
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            start_epoch = checkpoint['epoch'] + 1
+            if 'scaler' in checkpoint:
+                loss_scaler.load_state_dict(checkpoint['scaler'])
+            print("With optim & sched!")
+
+    return start_epoch
+
 
 
 def all_reduce_mean(x):

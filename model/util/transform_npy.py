@@ -4,8 +4,11 @@ from scipy.ndimage import rotate
 import torch
 from torchvision import transforms
 
+import cv2
+from torchvision import transforms
+
 # Define the class for resizing with padding
-class ResizeNpyWithPadding:
+class AddingPad:
     def __init__(self, output_size):
         self.output_size = output_size
     
@@ -18,8 +21,25 @@ class ResizeNpyWithPadding:
         left = (new_w - w) // 2
         right = new_w - w - left
         
-        resized_data = np.pad(data, ((top, bottom), (left, right)), mode='constant')
-        return resized_data
+        padded_data = np.pad(data, ((top, bottom), (left, right)), mode='constant')
+        return padded_data
+    
+
+
+class ResizeNumpy:
+    def __init__(self, output_size):
+        self.output_size = output_size
+
+    def __call__(self, np_array):
+        h, w = np_array.shape[:2]
+        new_h, new_w = self.output_size
+
+        # Redimensionar o array NumPy usando a interpolação bilinear
+        resized_array = cv2.resize(np_array, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
+
+        return resized_array
+
+
 
 # Define the class for random horizontal flipping
 class RandomHorizontalFlipNpy:

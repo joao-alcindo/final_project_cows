@@ -35,7 +35,7 @@ def train_one_epoch(model: torch.nn.Module,
     header = 'Epoch: [{}]'.format(epoch)
 
     # Set the frequency for printing training progress
-    print_freq = 20
+    print_freq = 10
 
     # Determine the number of accumulation iterations from the arguments
     accum_iter = args.accum_iter
@@ -48,7 +48,8 @@ def train_one_epoch(model: torch.nn.Module,
         print('log_dir: {}'.format(log_writer.log_dir))
 
     # Loop over batches of data in the data loader
-    for data_iter_step, (samples, _) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+    # for data_iter_step, (samples, _) in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+    for data_iter_step, samples in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
         # Adjust the learning rate on a per-iteration basis (instead of per-epoch)
         if data_iter_step % accum_iter == 0:
             lr_sched.adjust_learning_rate(optimizer, data_iter_step / len(data_loader) + epoch, args)
@@ -58,6 +59,7 @@ def train_one_epoch(model: torch.nn.Module,
 
         # Use automatic mixed precision (AMP) for training
         with torch.cuda.amp.autocast():
+            samples = samples.to(device).float()
             loss, _, _ = model(samples, mask_ratio=args.mask_ratio)
 
         # Get the loss value as a float

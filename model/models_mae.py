@@ -37,7 +37,9 @@ class MaskedAutoencoderViT(nn.Module):
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, embed_dim), requires_grad=False)  # fixed sin-cos embedding
 
         self.blocks = nn.ModuleList([
-            Block(embed_dim, num_heads, mlp_ratio, qkv_bias=True, qk_scale=None, norm_layer=norm_layer)
+            Block(embed_dim, num_heads, mlp_ratio, qkv_bias=True, 
+                  #qk_scale=None, 
+                  norm_layer=norm_layer)
             for i in range(depth)])
         self.norm = norm_layer(embed_dim)
         # --------------------------------------------------------------------------
@@ -51,7 +53,9 @@ class MaskedAutoencoderViT(nn.Module):
         self.decoder_pos_embed = nn.Parameter(torch.zeros(1, num_patches + 1, decoder_embed_dim), requires_grad=False)  # fixed sin-cos embedding
 
         self.decoder_blocks = nn.ModuleList([
-            Block(decoder_embed_dim, decoder_num_heads, mlp_ratio, qkv_bias=True, qk_scale=None, norm_layer=norm_layer)
+            Block(decoder_embed_dim, decoder_num_heads, mlp_ratio, qkv_bias=True, 
+                  #qk_scale=None, 
+                  norm_layer=norm_layer)
             for i in range(decoder_depth)])
 
         self.decoder_norm = norm_layer(decoder_embed_dim)
@@ -101,9 +105,9 @@ class MaskedAutoencoderViT(nn.Module):
         assert imgs.shape[2] == imgs.shape[3] and imgs.shape[2] % p == 0
 
         h = w = imgs.shape[2] // p
-        x = imgs.reshape(shape=(imgs.shape[0], 3, h, p, w, p))
+        x = imgs.reshape(shape=(imgs.shape[0], 1, h, p, w, p))
         x = torch.einsum('nchpwq->nhwpqc', x)
-        x = x.reshape(shape=(imgs.shape[0], h * w, p**2 * 3))
+        x = x.reshape(shape=(imgs.shape[0], h * w, p**2 * 1))
         return x
 
     def unpatchify(self, x):
@@ -115,9 +119,9 @@ class MaskedAutoencoderViT(nn.Module):
         h = w = int(x.shape[1]**.5)
         assert h * w == x.shape[1]
         
-        x = x.reshape(shape=(x.shape[0], h, w, p, p, 3))
+        x = x.reshape(shape=(x.shape[0], h, w, p, p, 1))
         x = torch.einsum('nhwpqc->nchpwq', x)
-        imgs = x.reshape(shape=(x.shape[0], 3, h * p, h * p))
+        imgs = x.reshape(shape=(x.shape[0], 1, h * p, h * p))
         return imgs
 
     def random_masking(self, x, mask_ratio):
